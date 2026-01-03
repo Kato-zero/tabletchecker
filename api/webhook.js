@@ -1,12 +1,6 @@
 export default async function handler(req, res) {
-  // Lipila usually sends JSON
-  const event = req.body;
-  console.log("Webhook received:", event);
+  console.log("Webhook received:", req.body);
 
-  if (event.status === "Successful") {
-    console.log("Payment successful:", event.referenceId);
-    // TODO: save to DB, mark order paid, etc.
-  }
-
-  res.status(200).send("ok");
+  // You’ll log + inspect first, then we’ll store in DB later
+  res.status(200).json({ received: true });
 }
