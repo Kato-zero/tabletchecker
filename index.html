@@ -25,34 +25,30 @@ document.getElementById("pay").addEventListener("click", async () => {
 
   status.textContent = "Creating payment...";
 
-  const body = {
-    name: document.getElementById("name").value,
-    amount: Number(document.getElementById("amount").value)
-  };
-
   try {
     const res = await fetch("/api/checkout", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(body)
+      body: JSON.stringify({
+        name: document.getElementById("name").value,
+        amount: Number(document.getElementById("amount").value)
+      })
     });
 
     const data = await res.json();
     console.log(data);
 
     if (data.redirectUrl) {
-      status.textContent = "Redirecting to payment...";
       window.location.href = data.redirectUrl;
     } else {
       status.textContent = "Could not start payment.";
     }
 
-  } catch (e) {
+  } catch (err) {
+    console.error(err);
     status.textContent = "Error creating payment.";
-    console.error(e);
   }
 });
 </script>
-
 </body>
 </html>
