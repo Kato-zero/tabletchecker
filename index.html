@@ -1,54 +1,144 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-  <title>Checkout</title>
-  <meta charset="UTF-8" />
+<meta charset="UTF-8">
+<title>AliExpress Tablet Checker</title>
+<style>
+body {
+  font-family: Arial, sans-serif;
+  background: #020617;
+  color: #e5e7eb;
+  padding: 20px;
+}
+h1 { color: #38bdf8; }
+textarea, input {
+  width: 100%;
+  padding: 10px;
+  margin: 6px 0;
+  border-radius: 6px;
+  border: none;
+}
+button {
+  padding: 12px;
+  width: 100%;
+  background: #38bdf8;
+  border: none;
+  border-radius: 6px;
+  font-weight: bold;
+  cursor: pointer;
+}
+.result {
+  margin-top: 20px;
+  padding: 15px;
+  border-radius: 8px;
+}
+.bad { background: #7f1d1d; }
+.ok { background: #065f46; }
+.super { background: #1e3a8a; }
+.pass { color: #4ade80; }
+.fail { color: #f87171; }
+</style>
 </head>
 
 <body>
-  <h2>Checkout</h2>
 
-  <label>Name</label><br>
-  <input id="name" placeholder="Your name"><br><br>
+<h1>📱 Tablet Spec Checker</h1>
 
-  <label>Amount (ZMW)</label><br>
-  <input id="amount" type="number" value="50"><br><br>
+<h3>✅ Your Checklist (Minimum Requirements)</h3>
+<ul>
+  <li>64GB Storage</li>
+  <li>2GB RAM</li>
+  <li>5000mAh Battery</li>
+  <li>SIM Card Support</li>
+  <li>Type-C Charging</li>
+  <li>Android 13 or higher</li>
+</ul>
 
-  <button id="pay" type="button">Pay Now</button>
+<h3>📋 Paste AliExpress Product Text</h3>
+<textarea id="productText" rows="7" placeholder="Paste the full product text from AliExpress here"></textarea>
 
+<button onclick="checkTablet()">Check Tablet</button>
 
-  <p id="status"></p>
+<div id="output"></div>
 
 <script>
-document.getElementById("pay").addEventListener("click", async () => {
-  const status = document.getElementById("status");
+function findNumber(text, keyword) {
+  let regex = new RegExp("(\\d+)\\s*(gb|mah|mp)", "i");
+  let line = text.split(",").find(l => l.toLowerCase().includes(keyword));
+  if (!line) return null;
+  let match = line.match(regex);
+  return match ? parseInt(match[1]) : null;
+}
 
-  status.textContent = "Creating payment...";
+function checkTablet() {
+  const text = document.getElementById("productText").value.toLowerCase();
 
-  try {
-    const res = await fetch("/api/checkout", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        name: document.getElementById("name").value,
-        amount: Number(document.getElementById("amount").value)
-      })
-    });
+  const checklist = {
+    storage: 64,
+    ram: 2,
+    battery: 5000,
+    android: 13
+  };
 
-    const data = await res.json();
-    console.log(data);
+  let results = [];
+  let passCount = 0;
+  let superCount = 0;
 
-    if (data.redirectUrl) {
-      window.location.href = data.redirectUrl;
-    } else {
-      status.textContent = "Could not start payment.";
+  const storage = findNumber(text, "gb rom") || findNumber(text, "storage");
+  const ram = findNumber(text, "gb ram");
+  const battery = findNumber(text, "mah");
+  const camera = findNumber(text, "mp");
+  const android = findNumber(text, "android");
+
+  const sim = text.includes("sim");
+  const typeC = text.includes("type c") || text.includes("type-c");
+
+  function evaluate(name, actual, required) {
+    if (actual === null) {
+      results.push(`<li class="fail">❌ ${name}: Not found</li>`);
+      return;
     }
-
-  } catch (err) {
-    console.error(err);
-    status.textContent = "Error creating payment.";
+    if (actual < required) {
+      results.push(`<li class="fail">❌ ${name}: ${actual} (Required ${required})</li>`);
+    } else {
+      passCount++;
+      if (actual > required) superCount++;
+      results.push(`<li class="pass">✅ ${name}: ${actual}</li>`);
+    }
   }
-});
+
+  evaluate("Storage (GB)", storage, checklist.storage);
+  evaluate("RAM (GB)", ram, checklist.ram);
+  evaluate("Battery (mAh)", battery, checklist.battery);
+  
+  evaluate("Android Version", android, checklist.android);
+
+  sim ? passCount++ && results.push(`<li class="pass">✅ SIM Supported</li>`)
+      : results.push(`<li class="fail">❌ SIM Not Supported</li>`);
+
+  typeC ? passCount++ && results.push(`<li class="pass">✅ Type-C Charging</li>`)
+        : results.push(`<li class="fail">❌ No Type-C</li>`);
+
+  let status = "BAD";
+  let className = "bad";
+
+  if (passCount >= 6) {
+    status = "OK";
+    className = "ok";
+  }
+  if (superCount >= 2) {
+    status = "SUPER";
+    className = "super";
+  }
+
+  document.getElementById("output").innerHTML = `
+    <div class="result ${className}">
+      <h2>Status: ${status}</h2>
+      <ul>${results.join("")}</ul>
+    </div>
+  `;
+}
 </script>
+
 </body>
 </html>
